@@ -1,0 +1,133 @@
+В хуке useRef() можно сохранять любое значение и хранить/изменять его в течение всей жизни компонента.
+При изменении значения не произойдет повторный рендер.
+Хук useRef() возвращает изменяемый ref-объект. В его свойстве current будет находится заданное значение:
+
+const ref = useRef({ name: "John" });
+useEffect(() => {
+    console.log(ref.current); // { name: "John" }
+});
+
+Важная особенность useRef() - ссылка на ref-объект неизменна, и поэтому сам он не может быть передан
+в useEffect() в качестве зависимости (так как useEffect() попросту не будет вызываться вновь). 
+Но можно передать его свойство current и его изменение будет влиять на вызов useEffect().
+
+Случаи использования хука useRef()
+
+Доступ к потомку
+Самый распространенный способ использования - получение доступа к потомку в компоненте:
+
+import { useRef, useState } from "react";
+
+export const ExampleFileInput = () => {
+    const inputRef = useRef(null);
+    const [isValueSet, setIsValueSet] = useState(false);
+
+    const handleSend = () => {
+        const file = inputRef.current.files;
+        console.log(file);
+    };
+
+    return (
+        <div>
+            <h2>Получения доступа к потомку</h2>
+            <label htmlFor="file">Выберите файл</label>
+            <input
+                ref={inputRef}
+                type="file"
+                onChange={() => setIsValueSet(true)}
+            />
+            <button onClick={handleSend} disabled={!isValueSet}>
+                Отправить файл
+            </button>
+        </div>
+    );
+};
+
+Здесь при нажатии на кнопку "Отправить файл", будет вызываться handleSend(), в котором мы получаем доступ 
+к <input type="file"> через inputRef.current и его свойство files. 
+Для того чтобы так сделать, мы создали inputRef с помощью хука useRef() и передали его в атрибут ref у <input>.
+
+Действия с DOM-элементами. 
+Например можно сделать focus на каком-то элементе:
+
+import { useRef } from "react";
+
+export const ExampleFocusInput = () => {
+    const inputRef = useRef(null);
+
+    const handleClick = () => {
+        inputRef.current.focus();
+    };
+
+    return (
+        <div>
+            <h2>Действия c DOM-элементом</h2>
+            <input ref={inputRef} type="text" />
+            <button onClick={handleClick}>Фокус</button>
+        </div>
+    );
+};
+
+Здесь при нажатии на кнопку "Фокус" будет вызвана функция handleClick(), в которой будет получен HTML-элемент <input>
+и вызван его метод focus().
+
+Получение предыдущего значения состояния
+Можно реализовать сравнение значений предыдущего и нового состояний.
+
+import { useState, useEffect, useRef } from "react";
+
+export const ExampleFefUsePrev = () => {
+    const [count, setCount] = useState(0); // состояние
+    const prevRef = useRef(count); // в Ref начальное значение равно состоянию
+		
+    useEffect(() => {
+        prevRef.current = count;
+    }, [count]); // при изменении count меняем значение в Ref
+		
+    const prevCount = prevRef.current;
+
+    return (
+        <div>
+            <h1>
+                Текщее значение: {count}, Предыдущее значение: {prevCount}
+            </h1>
+            <button onClick={() => setCount(count + 1)}>Increment</button>
+        </div>
+    ); // получаем предыдущее значение
+};
+
+При нажатии на кнопку "Increment" состояние count изменится, это изменение вызовет useEffect(), в котором будет присвоено
+новое значение prevRef.current. Изменение prevRef не вызывает рендер, мы видим его предыдущее значение до следующего рендера
+(не зависимо по какой причине произошел рендер).
+
+Подсчет количества рендеров
+Для оптимизации приложения, можно посмотреть, как часто вызывается рендер компонента. С помощью хуков useEffect() и useRef()
+это можно реализовать. Если мы не указываем никаких зависимостей для useEffect(), то он срабатывает при каждом рендеринге.
+В нём мы будем обновлять наш Ref:
+
+import { useState, useEffect, useRef } from "react";
+
+export const ExampleRefRerender = () => {
+    const renderCount = useRef(0);
+    const [state, toggleState] = useState(true);
+    
+    const toggle = () => {
+        toggleState(!state);
+    }; // изменение состояния для вызова рендера
+
+    useEffect(() => {
+        renderCount.current += 1;
+    }); // при каждом рендере будет вызвана функция и счетчик будет увеличен
+
+    return (
+        <div>
+            <h2>Количество рендеров</h2>
+            <p>Было рендеров: {renderCount.current}</p>
+            <p>
+                <button onClick={toggle}>Update state</button>
+            </p>
+        </div>
+    );
+};
+
+Благодаря тому, что изменение renderCount не влияет на рендер, мы можем подсчитать количество ререндеров.
